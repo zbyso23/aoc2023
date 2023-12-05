@@ -6,6 +6,9 @@ class Grid():
         self.data = [[None]*rows]*cols
         self.symbols_checked = False
 
+    def get_id(self, x, y):
+        return (x + 1) + ((y + 1) * (len(self.data[0]) + 1))
+
     def parse_row(self, y, row_raw):
         row = [*row_raw]
         digits = []
@@ -14,7 +17,7 @@ class Grid():
             res = re.search("[0-9]", value)
             if res is not None:
                 if len(digits) == 0:
-                    row[index] = { "type": "digit", "value": value, "start_index": index, "digit_part": False, "length": 1, "total": None, "is_symbol_around": False }
+                    row[index] = { "type": "digit", "value": value, "start_index": index, "digit_part": False, "length": 1, "total": None, "is_symbol_around": False, "id": str(self.get_id(index, y)) }
                 else:
                     row[index] = { "type": "digit", "value": value, "start_index": index - len(digits), "digit_part": True }
                 digits.append(value)
@@ -37,9 +40,12 @@ class Grid():
             row[last_digit["start_index"]]["total"] = nb
             row[last_digit["start_index"]]["is_symbol_around"] = is_symbol_around
             digits = []
-
         self.data[y] = row
         self.symbols_checked = False
+        print("ROW " + str(y + 1))
+        for col in row:
+            print(col)
+
 
     def _check_symbol(self, x, y, value):
         y_min = max(0, y - 1)
@@ -54,6 +60,7 @@ class Grid():
                 if self.data[row][col]["type"] == "digit":
                     digit_index = self.data[row][col]["start_index"]
                     self.data[row][digit_index]["is_symbol_around"] = True
+                    print("...NUMBER: " + self.data[row][digit_index]["total"])
 
 
     def check_symbols(self):
@@ -62,6 +69,7 @@ class Grid():
                 cell = self.data[row][col]
                 if cell["type"] != "symbol":
                     continue
+                print("Checking Symbol [" + cell["value"] + "]")
                 self._check_symbol(col, row, cell["value"])
 
 
@@ -99,25 +107,29 @@ class Processor():
             self.grid.parse_row(row_index, row)
             row_index += 1
 
+        already_added = []
+        total_diff = 0
         total = 0
         data = self.grid.get()
-
-        for row_index in range(0, len(data)):
-            for col_index in range(0, len(data[0])):
-                cell = data[row_index][col_index]
-                if cell["type"] != "digit" or cell["digit_part"] == True:
+        for row in data:
+            for cell in row:
+                if cell["type"] != "digit" or cell["digit_part"] == True or cell["is_symbol_around"] == False:
                     continue
-                if cell["is_symbol_around"] == False:
+                # print("NB ID " + cell["id"])
+                total_diff += cell["total"]
+                if cell["id"] in already_added:
                     continue
+                already_added.append(cell["id"])
                 total += cell["total"]
+        print("Total Diff: " + str(total_diff))
         return total
 
 
 
 
 if __name__ == '__main__':
-    # filename = "../data/03.test.csv"
-    filename = "../data/03.csv"
+    filename = "../data/03.test2.csv"
+    # filename = "../data/03.csv"
     p = Processor(filename)
     print("1st")
     total = p.process()
